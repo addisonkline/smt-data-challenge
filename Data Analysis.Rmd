@@ -1,0 +1,120 @@
+---
+title: "Data Analysis"
+author: "Albert Carreno and Addison Kline"
+date: "2023-08-20"
+output: html_document
+---
+
+```{r Step 1}
+# These commands store two objects: one containing all max runner distances
+# on successful pickoff attempts and one for unsuccessful attempts. Plays in
+# the dataset denoted with a 1 are successful pickoffs and those denoted with
+# a 0 are unsuccessful pickoffs.
+
+successful_pickoffs <- as.numeric(with(pickoff_data,
+                                  runner_max_distance
+                                  [pickoff_successful == 1]))
+unsuccessful_pickoffs <- as.numeric(with(pickoff_data,
+                                    runner_max_distance
+                                    [pickoff_successful == 0]))
+
+```
+
+
+
+```{r Step 2}
+# Here, we see how many pickoffs in the dataset succeeded and how many 
+# failed to get an idea of the sample size. 
+
+length(unsuccessful_pickoffs)
+length(successful_pickoffs)
+
+```
+
+
+```{r Step 3}
+# These commands compute the mean of a runner's maximum distance in feet from
+# first base when the pickoff was successful and when it wasn't.
+
+mean(successful_pickoffs)
+mean(unsuccessful_pickoffs)
+
+```
+
+
+```{r Step 4}
+# Additinally, these commands compute the mean distance in feet of the first 
+# baseman from the first base bag on successful and unsuccessful pickoffs.
+
+with(pickoff_data, mean(as.numeric(fielder_distance)
+                        [pickoff_successful == 0]))
+with(pickoff_data, mean(as.numeric(fielder_distance)
+                        [pickoff_successful == 1]))
+
+```
+
+```{r Step 5}
+# These commands calculate and display the 0th, 25th, 50th, 75th, and 100th 
+# percentiles for a runner's distance from the bag for all pickoff attempts.
+
+distance_percentiles <- quantile(as.numeric(pickoff_data$runner_max_distance))
+distance_percentiles <- round(distance_percentiles, digits = 2)
+distance_percentiles
+```
+
+```{r Step 6}
+# Here, two loops are used. The first computes how many unsuccessful pickoffs
+# occurred at four percentile ranges for runner distance: 0-25, 25-50, 50-75,
+# and 75-100. The second repeats this process, but for successful pickoffs.
+# The results of both these loops are stored as separate vectors, and then
+# combined into one named vector containing the number of successful and
+# unsuccessful pickoffs occuring at the specified distance percentile ranges.
+
+pickoff_fails_by_distance <- numeric(4)
+for (i in seq_len(4)) {
+  pickoff_fails_by_distance[i] <- length(unsuccessful_pickoffs
+                    [unsuccessful_pickoffs > distance_percentiles[i] &
+                    unsuccessful_pickoffs <= distance_percentiles[i + 1]])
+}
+
+pickoffs_by_distance <- numeric(4)
+for (i in seq_len(4)) {
+  pickoffs_by_distance[i] <- length(successful_pickoffs
+                      [successful_pickoffs > distance_percentiles[i] &
+                      successful_pickoffs <= distance_percentiles[i + 1]])
+}
+pickoff_rates_by_distance <- c(pickoff_fails_by_distance, pickoffs_by_distance)
+names(pickoff_rates_by_distance) <- c("0-25 UP", "25-50 UP", "50-75 UP", 
+                                      "75-100 UP", "0-25 SP", "25-50 SP",
+                                      "50-75 SP", "75-100 SP")
+pickoff_rates_by_distance
+```
+
+```{r Step 7}
+# Now that we have the number of successful and unsuccessful pickoffs at these
+# ranges, we can use this loop to find out the success rate of a pickoff 
+# depending on how far the runner is from the base percentile wise.
+
+for (i in seq_len(4)) {
+  pickoff_rates_by_distance[i] <- pickoff_rates_by_distance[i] /
+    (pickoff_rates_by_distance[i] + pickoff_rates_by_distance[i + 4]) * 100
+  pickoff_rates_by_distance[i + 4] <- 100 - pickoff_rates_by_distance[i]
+}
+```
+
+```{r Step 8}
+# We now have the rates, but these commands turn them into an easy
+# to read table. 
+
+pickoff_rates_by_distance <- round(pickoff_rates_by_distance, digits = 2)
+pickoff_rates_by_distance <- paste0(pickoff_rates_by_distance, "%")
+pickoff_rates_table <- as.data.frame(matrix(pickoff_rates_by_distance, 2, 4, 
+                               byrow = TRUE))
+rownames(pickoff_rates_table) <- c("Pickoff Fail",
+                                   "Pickoff Success")
+colnames(pickoff_rates_table) <- c("0 to 25th Percentile Distance",
+                                   "25th to 50th Percentile Distance",
+                                   "50th to 75th Percentile Distance",
+                                   "75th to 100th Percentile Distance")
+pickoff_rates_table
+```
