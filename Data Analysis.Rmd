@@ -1,1 +1,259 @@
+---
+title: "Data Analysis"
+author: "Albert Carreno and Addison Kline"
+date: "2023-08-20"
+output: html_document
+---
+```{r Step 0, message = FALSE}
+pickoff_data <- read.csv("/Users/albertcarreno/Desktop/Data Challenge/pickoff_data.csv")
+pickoff_data <- as.data.frame(pickoff_data)
+```
+
+```{r Data Subsetting}
+# These commands store two objects: one containing all max runner distances
+# on successful pickoff attempts and one for unsuccessful attempts. Plays in
+# the dataset denoted with a 1 are successful pickoffs and those denoted with
+# a 0 are unsuccessful pickoffs.
+
+successful_pickoffs <- as.numeric(with(pickoff_data,
+                                  runner_max_distance
+                                  [pickoff_successful == 1]))
+unsuccessful_pickoffs <- as.numeric(with(pickoff_data,
+                                    runner_max_distance
+                                    [pickoff_successful == 0]))
+
+```
+
+
+
+```{r Sample Sizes}
+# Here, we see how many pickoffs in the dataset succeeded and how many 
+# failed to get an idea of the sample size. 
+
+length(unsuccessful_pickoffs)
+length(successful_pickoffs)
+
+```
+
+
+```{r Mean Runner Distance for Pickoffs}
+# These commands compute the mean of a runner's maximum distance in feet from
+# first base when the pickoff was successful and when it wasn't.
+
+mean(successful_pickoffs)
+mean(unsuccessful_pickoffs)
+
+```
+
+
+```{r Mean Fielder Distance for Pickoffs}
+# Additionally, these commands compute the mean distance in feet of the first 
+# baseman from the first base bag on successful and unsuccessful pickoffs.
+
+with(pickoff_data, mean(as.numeric(fielder_distance)
+                        [pickoff_successful == 0]))
+with(pickoff_data, mean(as.numeric(fielder_distance)
+                        [pickoff_successful == 1]))
+
+```
+
+```{r Finding the Distance Quartiles}
+# These commands calculate and display the 0th, 25th, 50th, 75th, and 100th 
+# percentiles for a runner's distance from the bag for all pickoff attempts.
+
+distance_percentiles <- quantile(as.numeric(pickoff_data$runner_max_distance))
+distance_percentiles <- round(distance_percentiles, digits = 2)
+distance_percentiles
+```
+
+```{r Amount of Pickoffs at Distance Ranges}
+# Here, two loops are used. The first computes how many unsuccessful pickoffs
+# occurred at four percentile ranges for runner distance: 0-25, 25-50, 50-75,
+# and 75-100. The second repeats this process, but for successful pickoffs.
+# The results of both these loops are stored as separate vectors, and then
+# combined into one named vector containing the number of successful and
+# unsuccessful pickoffs occurring at the specified distance percentile ranges.
+
+pickoff_fails_by_distance <- numeric(4)
+for (i in seq_len(4)) {
+  pickoff_fails_by_distance[i] <- length(unsuccessful_pickoffs
+                    [unsuccessful_pickoffs > distance_percentiles[i] &
+                    unsuccessful_pickoffs <= distance_percentiles[i + 1]])
+}
+
+pickoffs_by_distance <- numeric(4)
+for (i in seq_len(4)) {
+  pickoffs_by_distance[i] <- length(successful_pickoffs
+                      [successful_pickoffs > distance_percentiles[i] &
+                      successful_pickoffs <= distance_percentiles[i + 1]])
+}
+pickoff_numbers <- c(pickoff_fails_by_distance, pickoffs_by_distance)
+names(pickoff_numbers) <- c("0-25 UP", "25-50 UP", "50-75 UP", 
+                                      "75-100 UP", "0-25 SP", "25-50 SP",
+                                      "50-75 SP", "75-100 SP")
+pickoff_numbers
+```
+
+```{r Finding the Pickoff Success Rates}
+# Now that we have the number of successful and unsuccessful pickoffs at 
+# these ranges, we can use this loop to find out the success rate of a pickoff 
+# depending on how far the runner is from first base percentile wise. We will
+# store these rates as a separate object to be used later.
+
+pickoff_success_rates <- numeric(4)
+for (i in seq_len(4)) {
+  pickoff_success_rates[i] <- ((pickoff_numbers[i + 4]) /
+                      (pickoff_numbers[i + 4] + pickoff_numbers[i])) * 100
+}
+pickoff_success_rates
+```
+
+```{r Finding the Proportions}
+# Another thing we can do with the number of successful and unsuccessful
+# pickoffs at the aforementioned distance ranges is find out the proportions
+# of successful and unsuccessful pickoffs at these ranges. We can find out
+# how often an unsuccessful pickoff happens at the first quartile for distance
+# range as an example. The following loop finds the proportions and stores them
+# as another object we can come back to.
+
+unsuccessful_proportions <- numeric(4)
+successful_proportions <- numeric(4)
+for (i in seq_len(4)) {
+  unsuccessful_proportions[i] <- (pickoff_numbers[i]/304) * 100
+  successful_proportions[i] <- (pickoff_numbers[i + 4]/70) * 100
+  pickoff_proportions <- c(unsuccessful_proportions, successful_proportions)
+}
+pickoff_proportions
+```
+
+```{r Proportional Bar Graph}
+# Now we can create a bar graph that visualizes the proportions of
+# successful and unsuccessful pickoffs at the runner distance quartiles.
+# First, we create a data frame that contains these proportions with the
+# pickoff_proportions item made previously and a couple of additional objects
+# that are labels for the percentile ranges and result of the pickoff attempt.
+
+percentiles <- rep(c("0-25th", "25-50th", "50-75th", "75-100th"), 2)
+pickoff_success <- rep(c("Unsuccessful Pickoff", "Successful Pickoff"),
+                       c(4, 4))
+pickoffs_df <- data.frame(percentiles, pickoff_proportions, pickoff_success)
+colnames(pickoffs_df) <- c("Percentile", "Percent", "Result")
+
+# Here, we create the bar graph with a few simple commands using a
+# graphics package in R called ggplot2 that is known for data visualizations.
+
+library(ggplot2)
+ggplot(pickoffs_df, aes(x = factor(`Percentile`), 
+y = `Percent`, fill = factor(`Result`))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Runner Distance Percentile Range", 
+      y = "Percent of Pickoffs at Distance Range",
+     title = "Percent of Successful and Unsuccessful Pickoffs
+     at Different Runner Distance Percentile Ranges",
+     fill = "Result") +
+  scale_y_continuous(breaks = seq(0, 50, 10), limits = c(0, 50)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_fill_manual(values = c("black", "gray"))
+```
+
+```{r Success Rate Bar Graph}
+# Although the success rates are simple to understand, we can still make a bar
+# graph that clearly demonstrates how pickoff success rates decline in 
+# relation to increased runner distance. First, we make a data frame using the
+# previously made pickoff_success_rates object and labels for the distance
+# percentile ranges.
+
+percentiles <- c("0-25th", "25-50th", "50-75th", "75-100th")
+pickoff_success_table <- data.frame(percentiles,  pickoff_success_rates)
+colnames(pickoff_success_table) <- c("Percentile Range", "Success Rate")
+
+# Next, we again use ggplot2 to create the bar graph. 
+
+ggplot(pickoff_success_table, aes(x = factor(`Percentile Range`), 
+                                  y = `Success Rate`)) +
+  geom_bar(stat = "identity", fill = "grey50", color = "grey50",
+           width = 0.5) +
+  labs(x = "Runner Distance Percentile Range", 
+       y = "Pickoff Success Rate(%)",
+       title = "Pickoff Success Rate(%) at Different
+       Runner Distance Percentile Ranges") +
+  scale_y_continuous(breaks = seq(0, 40, 10), limits = c(0, 40)) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+```{r Unsuccessful Pickoffs Histogram}
+# One factor we haven't analyzed is time. To do that, we will first create
+# a data frame that contains how long each unsuccessful pickoff took in 
+# seconds.
+
+up_times <- as.data.frame(with(pickoff_data, 
+                 as.numeric(pickoff_time[pickoff_successful == 0])/1000))
+colnames(up_times) <- "Times"
+
+# Now we can use the data frame to create a histogram that shows how many
+# unsuccessful pickoffs took 3 seconds, for instance.
+
+ggplot(up_times, aes(x = Times)) +
+  geom_histogram(bins = 20, fill = "grey20",
+                 color = "grey20") +
+  labs(x = "Unsuccessful Pickoff Times", y = "Frequency",
+       title = "Frequency Histogram of Unsuccessful Pickoff Times") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r Successful Pickoffs Histogram}
+# We will now repeat the above process for successful pickoffs by firstly
+# creating a new data frame with the times they each took in seconds.
+
+sp_times <- as.data.frame(with(pickoff_data, 
+                 as.numeric(pickoff_time[pickoff_successful == 1])/1000))
+colnames(sp_times) <- "Times"
+
+# Here, we essentially use the same commands to make a histogram for successful
+# pickoff times.
+
+ggplot(sp_times, aes(x = Times)) +
+  geom_histogram(bins = 10, fill = "grey50",
+                 color = "grey50") +
+  labs(x = "Successful Pickoff Times", y = "Frequency",
+       title = "Frequency Histogram of Successful Pickoff Times") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r Binomial Distribution Graphic}
+# Finally, we can determine if our results concerning how pickoffs
+# seem to be less successful as runner distance increases is actually
+# just due to chance. To do this, we need to find and visualize the 
+# probability density function for the data. First, we create another
+# data frame: this one contains the odds that a specific number of pickoffs 
+# out of 93, which represents one quarter of the total number of pickoffs in
+# the dataset, is successful. We use a size of 93 so we can carry out this
+# process for each distance quartile. Also, this is all given the mean pickoff 
+# success rate of about 18.72% or 70/374.
+
+pickoff_probs <- pbinom(1:40, size = rep(93, 40), 
+                         prob = (70/374))
+probs_df <- data.frame(1:40, pickoff_probs)
+colnames(probs_df) <- c("Successes", "Probability")
+
+# Pickoff attempts lend themselves to a binomial distribution quite nicely.
+# They are either successful or unsuccessful. As a result, we can create
+# a line graph that visualizes the probability density function
+# associated with the binomial distribution of our pickoff data with the
+# commands below.
+
+ggplot(probs_df, aes(x = `Successes`, y = `Probability`)) +
+  geom_line(color = "blue") +
+  labs(x = "Number of Successful Pickoffs",
+       y = "Probability",
+       title = "Probability Density Function Plot for the Binomial
+       Distribution of Pickoff Attempts") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+
+
 
