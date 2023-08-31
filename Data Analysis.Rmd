@@ -1,8 +1,6 @@
 ---
 title: "Data Analysis"
-author: "Albert Carreno and Addison Kline"
-date: "2023-08-20"
-output: html_document
+date: "2023-08-31"
 ---
 ```{r Step 0, message = FALSE}
 pickoff_data <- read.csv("/Users/albertcarreno/Desktop/Data Challenge/pickoff_data.csv")

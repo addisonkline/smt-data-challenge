@@ -1,6 +1,4 @@
-# Names: Albert Carreno (acarreno@baseball-analytica.com) and Addison Kline (akline@baseball-analytica.com) 
-# Date of creation: 2023-08-04
-# File Description: This Python script was written by Addison Kline to scrape the relevant pickoff data from the given CSV files and create a new CSV file
+# File Description: This Python script was written to scrape the relevant pickoff data from the given CSV files and create a new CSV file
 # from that filtered data; the script for analyzing the data is separate.
 
 import pandas as pd
